@@ -1,8 +1,10 @@
 import { INDIA_PACK } from "./indiaClaimsPack";
 import { US_PACK } from "./usClaimsPack";
+import { UK_PACK } from "./ukClaimsPack";
+import { EU_PACK } from "./euClaimsPack";
 import type { ClaimDecisionInput, Jurisdiction, RulePack, RuleResult } from "./types";
 
-export const PACKS: Record<Jurisdiction, RulePack> = { IN: INDIA_PACK, US: US_PACK };
+export const PACKS: Record<Jurisdiction, RulePack> = { IN: INDIA_PACK, US: US_PACK, UK: UK_PACK, EU: EU_PACK };
 
 export function packFor(jurisdiction: Jurisdiction | undefined): RulePack {
   return PACKS[jurisdiction ?? "IN"] ?? INDIA_PACK;

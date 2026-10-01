@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { useValifides } from "@/context/ValifidesContext";
 import type { EnforcementMode, Jurisdiction } from "@/engine/types";
 import { FlaskConical } from "lucide-react";
+import { JURISDICTIONS, MARKETS } from "@/components/valifides/markets";
 
 const MODES: { value: EnforcementMode; label: string; hint: string }[] = [
   { value: "SHADOW", label: "Shadow", hint: "Observe and log only; never changes the decision" },
@@ -11,10 +12,7 @@ const MODES: { value: EnforcementMode; label: string; hint: string }[] = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { mode, setMode, jurisdiction, setJurisdiction, pack } = useValifides();
-  const JURS: { value: Jurisdiction; label: string }[] = [
-    { value: "IN", label: "India" },
-    { value: "US", label: "United States" },
-  ];
+  const JURS: { value: Jurisdiction; label: string }[] = JURISDICTIONS.map((j) => ({ value: j, label: MARKETS[j].label }));
 
   return (
     <div className="flex min-h-screen w-full bg-background flex-col">

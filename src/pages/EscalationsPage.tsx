@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { actionLabel, fmtTime, LINE_LABEL, money, PageHeader, RuleResultList, VerdictBadge } from "@/components/valifides/shared";
+import { MARKETS } from "@/components/valifides/markets";
+import { packFor } from "@/engine/packs";
 import { useValifides, type EvidenceEntry } from "@/context/ValifidesContext";
 import type { ReviewerRole } from "@/engine/types";
 
@@ -8,9 +10,9 @@ const field = "rounded-lg border border-border bg-background px-3 py-2 text-[13p
 
 function ReviewForm({ entry, onDone }: { entry: EvidenceEntry; onDone: (e: EvidenceEntry) => void }) {
   const { recordReview } = useValifides();
-  const [reviewerId, setReviewerId] = useState("REV-");
-  const US = entry.input.jurisdiction === "US";
-  const [role, setRole] = useState<ReviewerRole>(US ? "LICENSED_ADJUSTER" : entry.input.line === "MOTOR_OWN_DAMAGE" ? "CLAIMS_OFFICER" : "MEDICAL_OFFICER");
+  const market = MARKETS[entry.input.jurisdiction];
+  const [reviewerId, setReviewerId] = useState(`${market.reviewerPrefix}-`);
+  const [role, setRole] = useState<ReviewerRole>(entry.input.line === "HEALTH_CASHLESS" || entry.input.line === "HEALTH_REIMBURSEMENT" ? "MEDICAL_OFFICER" : market.roles[0][0]);
   const [rationale, setRationale] = useState("");
   const valid = reviewerId.length > 4 && rationale.trim().length >= 10;
 
@@ -20,20 +22,9 @@ function ReviewForm({ entry, onDone }: { entry: EvidenceEntry; onDone: (e: Evide
       <div className="grid gap-3 md:grid-cols-[160px_220px_1fr]">
         <input className={field} value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} placeholder="Reviewer ID" />
         <select className={field} value={role} onChange={(e) => setRole(e.target.value as ReviewerRole)}>
-          {US ? (
-            <>
-              <option value="LICENSED_ADJUSTER">Licensed adjuster</option>
-              <option value="CLAIMS_MANAGER">Claims manager</option>
-              <option value="CLAIMS_OFFICER">Claims officer (unlicensed)</option>
-            </>
-          ) : (
-            <>
-              <option value="CLAIMS_OFFICER">Claims officer</option>
-              <option value="MEDICAL_OFFICER">Medical officer</option>
-              <option value="SURVEYOR">Surveyor</option>
-              <option value="CLAIMS_REVIEW_COMMITTEE">Claims Review Committee</option>
-            </>
-          )}
+          {market.roles.map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
         </select>
         <input className={field} value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="Rationale (at least 10 characters)" />
       </div>
@@ -89,7 +80,7 @@ export default function EscalationsPage() {
                 <div key={e.seq} className="prod-card-padded">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="font-mono text-[12px] text-foreground">{e.input.decisionId}</span>
-                    <span className="text-[12px] text-muted-foreground">{e.input.state ? `${e.input.state} · ` : ""}{LINE_LABEL[e.input.line]} · {actionLabel(e.input.proposedAction, e.input.jurisdiction)} · {money(e.input.claimAmount, e.input.jurisdiction === "US" ? "USD" : "INR")}</span>
+                    <span className="text-[12px] text-muted-foreground">{e.input.state ? `${e.input.state} · ` : ""}{LINE_LABEL[e.input.line]} · {actionLabel(e.input.proposedAction, e.input.jurisdiction)} · {money(e.input.claimAmount, packFor(e.input.jurisdiction).currency)}</span>
                     <span className="text-[11px] text-muted-foreground">{fmtTime(e.input.evaluatedAt, e.input.jurisdiction)}</span>
                     <span className="ml-auto">{done ? <span className="flex items-center gap-2 text-[12px] text-muted-foreground">After review <VerdictBadge verdict={done.result.verdict} /></span> : <VerdictBadge verdict="ESCALATE" />}</span>
                   </div>

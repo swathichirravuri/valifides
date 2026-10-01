@@ -37,7 +37,7 @@ const PASS = (message: string) => ({ outcome: "PASS" as const, message });
 const US_LINES = ["US_AUTO_PHYSICAL_DAMAGE", "US_HOMEOWNERS"] as const;
 
 const stateRuleApplies = (i: ClaimDecisionInput, states: UsState[], homeownersOnly: UsState[] = []) =>
-  !!i.state && states.includes(i.state) && (!homeownersOnly.includes(i.state) || i.line === "US_HOMEOWNERS");
+  !!i.state && (states as string[]).includes(i.state) && (!(homeownersOnly as string[]).includes(i.state) || i.line === "US_HOMEOWNERS");
 
 const ACK_LIMIT_DAYS: Record<UsState, number> = { CA: 15, TX: 15, FL: 7 };
 const ACK_SOURCE = "CA 10 CCR 2695.5(e); TX Ins. Code 542.055; FL Stat. 627.70131(1)(a)";
@@ -104,7 +104,7 @@ export const US_RULES: Rule[] = [
     description: "Acknowledge the claim within 15 calendar days (CA, TX) or 7 calendar days (FL homeowners).",
     check: (i, def) => {
       if (!stateRuleApplies(i, ["CA", "TX", "FL"], ["FL"])) return NA("No acknowledgement deadline for this state and line in the draft pack.");
-      const limit = ACK_LIMIT_DAYS[i.state!];
+      const limit = ACK_LIMIT_DAYS[i.state as UsState];
       const end = i.timeline.acknowledgedAt ?? i.evaluatedAt;
       const d = days(i.timeline.intimatedAt, end);
       if (d > limit)

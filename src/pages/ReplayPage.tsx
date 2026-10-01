@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AppLayout } from "@/components/AppLayout";
 import { actionLabel, LINE_LABEL, money, PageHeader, RuleResultList, Stat, VerdictBadge } from "@/components/valifides/shared";
+import { MARKETS } from "@/components/valifides/markets";
 import { useValifides } from "@/context/ValifidesContext";
 import { AS_OF } from "@/engine/synthetic";
 import type { Verdict } from "@/engine/types";
@@ -51,10 +52,10 @@ export default function ReplayPage() {
         />
 
         <div className="grid gap-4 md:grid-cols-4">
-          <Stat label="Decisions replayed" value={stats.total} note={jurisdiction === "US" ? "Synthetic auto and homeowners claims, CA/TX/FL" : "Synthetic health and motor claims"} />
+          <Stat label="Decisions replayed" value={stats.total} note={MARKETS[jurisdiction].replayNote} />
           <Stat label="Would escalate" value={stats.verdicts.ESCALATE} tone="warning" note={`${Math.round((stats.verdicts.ESCALATE / stats.total) * 100)}% need a human or are near a deadline`} />
           <Stat label="Would block" value={stats.verdicts.BLOCK} tone="critical" note={`${Math.round((stats.verdicts.BLOCK / stats.total) * 100)}% conflict with a draft rule`} />
-          <Stat label="Penalty interest accrued" value={money(stats.penal, pack.currency)} note={jurisdiction === "US" ? "Texas late payments at 18% a year (draft)" : "Late payments after acceptance (draft 8.5% p.a.)"} />
+          <Stat label="Penalty interest accrued" value={money(stats.penal, pack.currency)} note={MARKETS[jurisdiction].penaltyNote} />
         </div>
 
         <div className="prod-card-padded">

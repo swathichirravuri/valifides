@@ -1,18 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { LINE_LABEL, PageHeader } from "@/components/valifides/shared";
+import { MARKETS } from "@/components/valifides/markets";
 import { useValifides } from "@/context/ValifidesContext";
-
-const CATEGORIES = {
-  IN: [
-    ["IRDAI requirement (verify with counsel)", "Drawn from IRDAI regulations or circulars as publicly summarised."],
-    ["Statute (in force from 13 May 2027)", "DPDP Act obligations that apply once the core rules take effect."],
-    ["Valifides control (anticipates IRDAI AI framework)", "Good-practice controls built ahead of IRDAI's AI framework, not yet a legal requirement."],
-  ],
-  US: [
-    ["State law or regulation (verify with counsel)", "Drawn from state claims-handling statutes and regulations: California, Texas, Florida in this draft."],
-    ["Valifides control (aligned to NAIC AI bulletin)", "Controls that put the NAIC AI Model Bulletin's expectations into practice at decision time; the bulletin itself is guidance adopted state by state."],
-  ],
-} as const;
 
 export default function RulePackPage() {
   const { pack, jurisdiction } = useValifides();
@@ -24,8 +13,8 @@ export default function RulePackPage() {
           subtitle={`The fixed rules Valifides applies to ${pack.name} decisions. Each rule names its source and how settled that source is. Every rule is a draft compiled from public sources and must be reviewed by insurance counsel before use with a real insurer.`}
         />
 
-        <div className={`grid gap-3 ${jurisdiction === "US" ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
-          {CATEGORIES[jurisdiction].map(([t, d]) => (
+        <div className={`grid gap-3 ${MARKETS[jurisdiction].categories.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+          {MARKETS[jurisdiction].categories.map(([t, d]) => (
             <div key={t} className="prod-card-padded">
               <h3>{t}</h3>
               <p className="mt-1.5 text-[12px] text-muted-foreground">{d}</p>

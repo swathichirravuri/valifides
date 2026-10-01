@@ -2,16 +2,23 @@
 // Imports inside src/engine must stay relative (no "@/" alias) so the
 // Vercel API function in /api can bundle the same engine.
 
-export type Jurisdiction = "IN" | "US";
+export type Jurisdiction = "IN" | "US" | "UK" | "EU";
 export type UsState = "CA" | "TX" | "FL";
-export type Currency = "INR" | "USD";
+export type EuMemberState = "DE" | "FR" | "NL";
+/** US state or EU member state whose local rules apply. */
+export type Region = UsState | EuMemberState;
+export type Currency = "INR" | "USD" | "GBP" | "EUR";
 
 export type ClaimLine =
   | "HEALTH_CASHLESS"
   | "HEALTH_REIMBURSEMENT"
   | "MOTOR_OWN_DAMAGE"
   | "US_AUTO_PHYSICAL_DAMAGE"
-  | "US_HOMEOWNERS";
+  | "US_HOMEOWNERS"
+  | "UK_MOTOR"
+  | "UK_HOME"
+  | "EU_MOTOR"
+  | "EU_HEALTH";
 
 export type ProposedAction =
   | "APPROVE_FULL"
@@ -20,7 +27,8 @@ export type ProposedAction =
   | "QUERY_DOCUMENTS"
   | "PENDING";
 
-export type AiInvolvement = "NONE" | "ASSISTED" | "AI_RECOMMENDED";
+/** AUTOMATED = the AI decided with no person involved in the decision (straight-through). */
+export type AiInvolvement = "NONE" | "ASSISTED" | "AI_RECOMMENDED" | "AUTOMATED";
 
 export type ReviewerRole =
   | "CLAIMS_OFFICER"
@@ -28,7 +36,8 @@ export type ReviewerRole =
   | "SURVEYOR"
   | "CLAIMS_REVIEW_COMMITTEE"
   | "LICENSED_ADJUSTER"
-  | "CLAIMS_MANAGER";
+  | "CLAIMS_MANAGER"
+  | "CLAIMS_HANDLER";
 
 export type RepudiationGround =
   | "FRAUD"
@@ -71,8 +80,8 @@ export interface ClaimTimeline {
 
 export interface ClaimDecisionInput {
   jurisdiction: Jurisdiction;
-  /** US only: the state whose claim rules apply. */
-  state?: UsState | null;
+  /** US: the state; EU: the member state whose national rules apply. */
+  state?: Region | null;
   decisionId: string;
   claimId: string;
   insurer: string;
@@ -94,6 +103,18 @@ export interface ClaimDecisionInput {
   fraudInvestigationRef?: string | null;
   /** US: the factors that decided the outcome (used for the unfair-discrimination check). */
   decisiveFactors?: string[];
+  /** UK/EU: how the policyholder's misrepresentation is classified (CIDRA 2012; VVG s.19). */
+  misrepresentationType?: "DELIBERATE_OR_RECKLESS" | "CARELESS" | "INNOCENT" | null;
+  /** UK: customer flagged as showing characteristics of vulnerability (FCA FG21/1). */
+  vulnerableCustomer?: boolean;
+  /** UK/EU: customer told of the automated decision and how to get human review and contest it. */
+  automatedSafeguardsNotified?: boolean;
+  /** EU: explicit consent to automated decisions using health data (GDPR Art. 22(4), 9(2)(a)). */
+  explicitConsentAutomated?: boolean;
+  /** EU: the insurer's AI Act classification of the model. */
+  aiActRiskClass?: "HIGH_RISK" | "NOT_HIGH_RISK" | null;
+  /** Germany: advance payment offered while investigations continue (VVG s.14(2)). */
+  advancePaymentOffered?: boolean;
   monthsContinuousCoverage: number;
   claimAmount: number;
   approvedAmount?: number | null;
@@ -110,7 +131,12 @@ export type SourceStatus =
   | "Statute (in force from 13 May 2027)"
   | "Valifides control (anticipates IRDAI AI framework)"
   | "State law or regulation (verify with counsel)"
-  | "Valifides control (aligned to NAIC AI bulletin)";
+  | "Valifides control (aligned to NAIC AI bulletin)"
+  | "FCA rule or UK statute (verify with counsel)"
+  | "Valifides control (aligned to FCA Consumer Duty)"
+  | "EU regulation or case law (verify with counsel)"
+  | "German statute (verify with counsel)"
+  | "Valifides control (aligned to EIOPA AI Opinion)";
 
 export interface RuleDefinition {
   id: string;

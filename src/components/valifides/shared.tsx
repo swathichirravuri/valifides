@@ -1,4 +1,5 @@
 import type { ClaimLine, Currency, Jurisdiction, ProposedAction, RuleResult, Verdict } from "@/engine/types";
+import { MARKETS } from "./markets";
 import { AlertTriangle, CheckCircle2, MinusCircle, ShieldX } from "lucide-react";
 
 export const LINE_LABEL: Record<ClaimLine, string> = {
@@ -7,21 +8,25 @@ export const LINE_LABEL: Record<ClaimLine, string> = {
   MOTOR_OWN_DAMAGE: "Motor · own damage",
   US_AUTO_PHYSICAL_DAMAGE: "Auto · physical damage",
   US_HOMEOWNERS: "Homeowners",
+  UK_MOTOR: "Motor",
+  UK_HOME: "Home",
+  EU_MOTOR: "Motor",
+  EU_HEALTH: "Health (private)",
 };
+
+const CURRENCY_LOCALE: Record<Currency, string> = { INR: "en-IN", USD: "en-US", GBP: "en-GB", EUR: "en-IE" };
 
 export const money = (n: number | null | undefined, currency: Currency = "INR") =>
   n === undefined || n === null
     ? "—"
-    : currency === "USD"
-      ? `$${Math.round(n).toLocaleString("en-US")}`
-      : `₹${Math.round(n).toLocaleString("en-IN")}`;
+    : new Intl.NumberFormat(CURRENCY_LOCALE[currency], { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 
 export const actionLabel = (a: ProposedAction, j: Jurisdiction = "IN") =>
-  a === "REPUDIATE" ? (j === "US" ? "deny" : "repudiate") : a.replace(/_/g, " ").toLowerCase();
+  a === "REPUDIATE" ? MARKETS[j].refuseWord.toLowerCase() : a.replace(/_/g, " ").toLowerCase();
 
 export const fmtTime = (iso: string, j: Jurisdiction = "IN") =>
-  new Date(iso).toLocaleString(j === "US" ? "en-US" : "en-IN", {
-    timeZone: j === "US" ? "America/New_York" : "Asia/Kolkata",
+  new Date(iso).toLocaleString(MARKETS[j].locale, {
+    timeZone: MARKETS[j].timeZone,
     day: "2-digit",
     month: "short",
     year: "numeric",

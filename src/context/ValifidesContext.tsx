@@ -2,8 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { evaluate, evidencePayload } from "@/engine/evaluate";
 import { sha256Hex } from "@/engine/hash";
 import { packFor } from "@/engine/packs";
-import { generateSyntheticDecisions, SCENARIOS, type Scenario } from "@/engine/synthetic";
-import { generateUsSyntheticDecisions, US_SCENARIOS } from "@/engine/usSynthetic";
+import type { Scenario } from "@/engine/synthetic";
+import { MARKETS } from "@/components/valifides/markets";
 import type { ClaimDecisionInput, EnforcementMode, EvaluationResult, HumanReview, Jurisdiction, RulePack } from "@/engine/types";
 
 export type EntrySource = "GATEWAY" | "REVIEW" | "REPLAY";
@@ -40,7 +40,7 @@ export function ValifidesProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<EnforcementMode>("SHADOW");
   const [fullLog, setLog] = useState<EvidenceEntry[]>([]);
   const pack = packFor(jurisdiction);
-  const scenarios = jurisdiction === "US" ? US_SCENARIOS : SCENARIOS;
+  const scenarios = MARKETS[jurisdiction].scenarios;
   // Each jurisdiction keeps its own log view.
   const log = useMemo(() => fullLog.filter((e) => e.input.jurisdiction === jurisdiction), [fullLog, jurisdiction]);
   const seqRef = useRef(1);
@@ -49,7 +49,7 @@ export function ValifidesProvider({ children }: { children: React.ReactNode }) {
   // Shadow replay: always evaluated in SHADOW, independent of the live mode.
   const replay = useMemo(
     () =>
-      (jurisdiction === "US" ? generateUsSyntheticDecisions() : generateSyntheticDecisions()).map((input) => ({
+      MARKETS[jurisdiction].generate().map((input) => ({
         input,
         result: evaluate(input, "SHADOW"),
       })),
@@ -60,7 +60,7 @@ export function ValifidesProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     Promise.all(
       replay.map(async ({ input, result }, i) => ({
-        seq: (jurisdiction === "US" ? 200000 : 100000) + i,
+        seq: MARKETS[jurisdiction].seqOffset + i,
         input,
         result,
         hash: await sha256Hex(evidencePayload(input, result)),

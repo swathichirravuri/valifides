@@ -4,6 +4,9 @@ import { sha256Hex } from "./hash";
 import { generateSyntheticDecisions, SCENARIOS } from "./synthetic";
 import { businessDaysBetween } from "./usClaimsPack";
 import { generateUsSyntheticDecisions, US_SCENARIOS } from "./usSynthetic";
+import { generateUkSyntheticDecisions, UK_SCENARIOS } from "./ukSynthetic";
+import { EU_SCENARIOS, generateEuSyntheticDecisions } from "./euSynthetic";
+import type { Scenario } from "./synthetic";
 
 describe("India claims rule pack", () => {
   for (const s of SCENARIOS) {
@@ -75,5 +78,41 @@ describe("US P&C claims rule pack", () => {
   it("does not apply India rules to US decisions", () => {
     const r = evaluate(US_SCENARIOS[0].input, "SHADOW");
     expect(r.results.every((x) => x.ruleId.startsWith("US-"))).toBe(true);
+  });
+});
+
+describe.each([
+  ["UK", "UK-CLAIMS", "UK-", UK_SCENARIOS, generateUkSyntheticDecisions],
+  ["EU", "EU-CLAIMS", "EU-", EU_SCENARIOS, generateEuSyntheticDecisions],
+] as [string, string, string, Scenario[], () => ReturnType<typeof generateUkSyntheticDecisions>][])("%s claims rule pack", (_j, packId, prefix, scenarios, generate) => {
+  for (const s of scenarios) {
+    it(`scenario "${s.label}" gives ${s.expected}`, () => {
+      const r = evaluate(s.input, "ENFORCE");
+      expect(r.verdict).toBe(s.expected);
+      expect(r.rulePackId).toBe(packId);
+      expect(r.results.every((x) => x.ruleId.startsWith(prefix))).toBe(true);
+    });
+  }
+
+  it("generates a stable dataset with unique decision IDs and a mix of verdicts", () => {
+    const a = generate();
+    expect(a).toEqual(generate());
+    expect(new Set(a.map((d) => d.decisionId)).size).toBe(a.length);
+    const verdicts = new Set(a.map((d) => evaluate(d, "SHADOW").verdict));
+    expect(verdicts).toEqual(new Set(["APPROVE", "ESCALATE", "BLOCK"]));
+  });
+});
+
+describe("EU member-state rules", () => {
+  it("applies German VVG rules only to Germany", () => {
+    const de = EU_SCENARIOS.find((s) => s.id === "e4")!.input;
+    const fr = { ...de, state: "FR" as const };
+    expect(evaluate(de, "SHADOW").results.find((r) => r.ruleId === "EU-CLM-11")!.outcome).toBe("BLOCK");
+    expect(evaluate(fr, "SHADOW").results.find((r) => r.ruleId === "EU-CLM-11")!.outcome).toBe("NOT_APPLICABLE");
+  });
+
+  it("extends the German non-disclosure limit to 10 years for intentional breaches", () => {
+    const de = { ...EU_SCENARIOS.find((s) => s.id === "e4")!.input, misrepresentationType: "DELIBERATE_OR_RECKLESS" as const };
+    expect(evaluate(de, "SHADOW").results.find((r) => r.ruleId === "EU-CLM-11")!.outcome).toBe("PASS");
   });
 });

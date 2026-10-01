@@ -3,7 +3,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { money, LINE_LABEL, PageHeader, RuleResultList, VerdictBadge } from "@/components/valifides/shared";
 import { useValifides, type EvidenceEntry } from "@/context/ValifidesContext";
 import { evaluate } from "@/engine/evaluate";
-import type { AiInvolvement, ClaimDecisionInput, ClaimLine, ProposedAction, RepudiationGround, ReviewerRole, UsState } from "@/engine/types";
+import type { AiInvolvement, ClaimDecisionInput, ClaimLine, ProposedAction, Region, RepudiationGround, ReviewerRole } from "@/engine/types";
+import { MARKETS } from "@/components/valifides/markets";
 import { Play } from "lucide-react";
 
 const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
@@ -29,7 +30,8 @@ const MODE_EFFECT = {
 
 export default function GatewayPage() {
   const { mode, evaluateAndLog, jurisdiction, pack, scenarios } = useValifides();
-  const US = jurisdiction === "US";
+  const market = MARKETS[jurisdiction];
+  const J = jurisdiction;
   const [scenarioId, setScenarioId] = useState(scenarios[0].id);
   const [input, setInput] = useState<ClaimDecisionInput>(scenarios[0].input);
   const [json, setJson] = useState(JSON.stringify(scenarios[0].input, null, 2));
@@ -77,14 +79,20 @@ export default function GatewayPage() {
 
   const hasReview = !!input.humanReview;
   const purposesCrossSell = input.dataPurposes.includes("CROSS_SELL_MODEL_TRAINING");
-  const zipDecisive = (input.decisiveFactors ?? []).includes("ZIP_CODE");
+  const flag = market.flagFactor;
+  const flagOn = !!flag && (input.decisiveFactors ?? []).includes(flag.code);
   const lineOptions = pack.lines.map((l) => [l, LINE_LABEL[l]] as [ClaimLine, string]);
-  const roleOptions: [ReviewerRole, string][] = US
-    ? [["LICENSED_ADJUSTER", "Licensed adjuster"], ["CLAIMS_MANAGER", "Claims manager"], ["CLAIMS_OFFICER", "Claims officer (unlicensed)"]]
-    : [["CLAIMS_OFFICER", "Claims officer"], ["MEDICAL_OFFICER", "Medical officer"], ["SURVEYOR", "Surveyor"], ["CLAIMS_REVIEW_COMMITTEE", "Claims Review Committee"]];
-  const groundOptions: [RepudiationGround | "", string][] = US
-    ? [["", "—"], ["FRAUD", "Fraud"], ["POLICY_EXCLUSION", "Policy exclusion"], ["NOT_COVERED", "Loss not covered"], ["POLICY_LAPSED", "Policy lapsed"], ["OTHER", "Other"]]
-    : [["", "—"], ["FRAUD", "Fraud"], ["NON_DISCLOSURE", "Non-disclosure"], ["POLICY_EXCLUSION", "Policy exclusion"], ["POLICY_LAPSED", "Policy lapsed"], ["OTHER", "Other"]];
+  const roleOptions = market.roles;
+  const groundOptions = market.grounds;
+  const hasVendor = J !== "IN";
+  const showCover = J === "IN" || J === "EU";
+  const showMisrep = (J === "UK" || J === "EU") && input.repudiationGround === "NON_DISCLOSURE";
+  const check = (key: keyof ClaimDecisionInput, text: string) => (
+    <label className="flex items-center gap-2 text-[13px] text-foreground">
+      <input type="checkbox" checked={!!input[key]} onChange={(e) => update({ [key]: e.target.checked } as Partial<ClaimDecisionInput>)} />
+      {text}
+    </label>
+  );
 
   return (
     <AppLayout>
@@ -109,14 +117,10 @@ export default function GatewayPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              {US && (
+              {market.regions && (
                 <div className="space-y-1.5">
-                  <p className={label}>State</p>
-                  <Select<UsState>
-                    value={(input.state ?? "CA") as UsState}
-                    onChange={(v) => update({ state: v })}
-                    options={[["CA", "California"], ["TX", "Texas"], ["FL", "Florida (homeowners rules)"]]}
-                  />
+                  <p className={label}>{market.regionLabel}</p>
+                  <Select<Region> value={(input.state ?? market.regions[0][0]) as Region} onChange={(v) => update({ state: v })} options={market.regions} />
                 </div>
               )}
               <div className="space-y-1.5">
@@ -130,9 +134,9 @@ export default function GatewayPage() {
                   onChange={(v) => update({ proposedAction: v })}
                   options={[
                     ["APPROVE_FULL", "Approve in full"],
-                    ["APPROVE_PARTIAL", US ? "Pay partially" : "Approve partially"],
-                    ["REPUDIATE", US ? "Deny" : "Repudiate"],
-                    ["QUERY_DOCUMENTS", US ? "Request information" : "Query documents"],
+                    ["APPROVE_PARTIAL", market.partialWord],
+                    ["REPUDIATE", market.refuseWord],
+                    ["QUERY_DOCUMENTS", J === "IN" ? "Query documents" : "Request information"],
                     ["PENDING", "Pending"],
                   ]}
                 />
@@ -146,11 +150,12 @@ export default function GatewayPage() {
                     ["NONE", "None"],
                     ["ASSISTED", "AI-assisted"],
                     ["AI_RECOMMENDED", "AI recommended the action"],
+                    ["AUTOMATED", "Automated (no person in the decision)"],
                   ]}
                 />
               </div>
               <div className="space-y-1.5">
-                <p className={label}>{US ? "Denial ground" : "Repudiation ground"}</p>
+                <p className={label}>{market.refuseWord === "Repudiate" ? "Repudiation" : market.refuseWord === "Deny" ? "Denial" : market.refuseWord === "Decline" ? "Decline" : "Refusal"} ground</p>
                 <Select<RepudiationGround | "">
                   value={(input.repudiationGround ?? "") as RepudiationGround | ""}
                   onChange={(v) => update({ repudiationGround: v === "" ? null : v })}
@@ -158,14 +163,34 @@ export default function GatewayPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <p className={label}>{US ? "Policy provision cited" : "Exclusion clause cited"}</p>
-                <input className={field} value={input.exclusionClauseRef ?? ""} placeholder={US ? "e.g. Part D, Exclusion 4" : "e.g. Sch. 2.4"} onChange={(e) => update({ exclusionClauseRef: e.target.value || null })} />
+                <p className={label}>{market.provisionLabel}</p>
+                <input className={field} value={input.exclusionClauseRef ?? ""} placeholder={market.provisionPlaceholder} onChange={(e) => update({ exclusionClauseRef: e.target.value || null })} />
               </div>
               <div className="space-y-1.5">
-                <p className={label}>{US ? "SIU investigation ref" : "Fraud investigation ref"}</p>
-                <input className={field} value={input.fraudInvestigationRef ?? ""} placeholder={US ? "e.g. SIU-4821" : "e.g. INV-4821"} onChange={(e) => update({ fraudInvestigationRef: e.target.value || null })} />
+                <p className={label}>{market.fraudRefLabel}</p>
+                <input className={field} value={input.fraudInvestigationRef ?? ""} placeholder={market.fraudRefPlaceholder} onChange={(e) => update({ fraudInvestigationRef: e.target.value || null })} />
               </div>
-              {US ? (
+              {showMisrep && (
+                <div className="space-y-1.5">
+                  <p className={label}>Misrepresentation was</p>
+                  <Select<string>
+                    value={input.misrepresentationType ?? ""}
+                    onChange={(v) => update({ misrepresentationType: (v || null) as ClaimDecisionInput["misrepresentationType"] })}
+                    options={[["", "Not classified"], ["DELIBERATE_OR_RECKLESS", "Deliberate or reckless"], ["CARELESS", "Careless"], ["INNOCENT", "Innocent"]]}
+                  />
+                </div>
+              )}
+              {J === "EU" && (
+                <div className="space-y-1.5">
+                  <p className={label}>AI Act classification</p>
+                  <Select<string>
+                    value={input.aiActRiskClass ?? ""}
+                    onChange={(v) => update({ aiActRiskClass: (v || null) as ClaimDecisionInput["aiActRiskClass"] })}
+                    options={[["", "Not recorded"], ["NOT_HIGH_RISK", "Not high-risk"], ["HIGH_RISK", "High-risk"]]}
+                  />
+                </div>
+              )}
+              {hasVendor && (
                 <>
                   <div className="space-y-1.5">
                     <p className={label}>AI vendor (if third-party)</p>
@@ -176,18 +201,19 @@ export default function GatewayPage() {
                     <input className={field} value={input.vendorAssessmentRef ?? ""} placeholder="e.g. VDD-301" onChange={(e) => update({ vendorAssessmentRef: e.target.value || null })} />
                   </div>
                   <div className="col-span-2 space-y-1.5">
-                    <p className={label}>Factual basis stated in the denial</p>
+                    <p className={label}>Reason given to the customer (facts relied on)</p>
                     <input className={field} value={input.denialFactualBasis ?? ""} placeholder="e.g. Damage predates the policy period per inspection photos." onChange={(e) => update({ denialFactualBasis: e.target.value || null })} />
                   </div>
                 </>
-              ) : (
+              )}
+              {showCover && (
                 <div className="space-y-1.5">
-                  <p className={label}>Months of continuous cover</p>
+                  <p className={label}>{J === "EU" ? "Months from contract to loss" : "Months of continuous cover"}</p>
                   <input type="number" min={0} className={field} value={input.monthsContinuousCoverage} onChange={(e) => update({ monthsContinuousCoverage: Number(e.target.value) })} />
                 </div>
               )}
               <div className="space-y-1.5">
-                <p className={label}>Claim amount ({pack.currency === "USD" ? "$" : "₹"})</p>
+                <p className={label}>Claim amount ({pack.currency})</p>
                 <input type="number" min={0} className={field} value={input.claimAmount} onChange={(e) => update({ claimAmount: Number(e.target.value) })} />
               </div>
             </div>
@@ -200,29 +226,34 @@ export default function GatewayPage() {
                   onChange={(e) =>
                     update({
                       humanReview: e.target.checked
-                        ? { reviewerId: US ? "ADJ-100" : "REV-100", role: roleOptions[0][0], reviewedAt: input.evaluatedAt, rationale: "Reviewed claim file." }
+                        ? { reviewerId: `${market.reviewerPrefix}-100`, role: roleOptions[0][0], reviewedAt: input.evaluatedAt, rationale: "Reviewed claim file." }
                         : null,
                     })
                   }
                 />
-                {US ? "Adjuster review recorded" : "Human review recorded"}
+                {J === "US" ? "Adjuster review recorded" : "Human review recorded"}
               </label>
               {hasReview && (
                 <Select<ReviewerRole> value={input.humanReview!.role} onChange={(v) => update({ humanReview: { ...input.humanReview!, role: v } })} options={roleOptions} />
               )}
-              {US ? (
+              {flag && (
                 <label className="flex items-center gap-2 text-[13px] text-foreground">
                   <input
                     type="checkbox"
-                    checked={zipDecisive}
+                    checked={flagOn}
                     onChange={(e) => {
-                      const f = (input.decisiveFactors ?? []).filter((x) => x !== "ZIP_CODE");
-                      update({ decisiveFactors: e.target.checked ? [...f, "ZIP_CODE"] : f });
+                      const f = (input.decisiveFactors ?? []).filter((x) => x !== flag.code);
+                      update({ decisiveFactors: e.target.checked ? [...f, flag.code] : f });
                     }}
                   />
-                  ZIP code was a decisive factor
+                  {flag.label}
                 </label>
-              ) : (
+              )}
+              {J === "UK" && check("vulnerableCustomer", "Customer shows signs of vulnerability")}
+              {(J === "UK" || J === "EU") && check("automatedSafeguardsNotified", "Customer told of automated decision and right to human review")}
+              {J === "EU" && check("explicitConsentAutomated", "Explicit consent to automated use of health data")}
+              {J === "EU" && check("advancePaymentOffered", "Advance payment offered (Germany)")}
+              {J === "IN" && (
                 <label className="flex items-center gap-2 text-[13px] text-foreground">
                   <input
                     type="checkbox"
