@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 4%;
+    --foreground: 220 10% 92%;
+
+    --card: 220 18% 7%;
+    --card-foreground: 220 10% 92%;
+
+    --popover: 220 18% 7%;
+    --popover-foreground: 220 10% 92%;
+
+    --primary: 24 90% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 11%;
+    --secondary-foreground: 220 10% 85%;
+
+    --muted: 220 14% 10%;
+    --muted-foreground: 220 10% 78%;
+
+    --accent: 220 15% 13%;
+    --accent-foreground: 220 10% 92%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 14%;
+    --border-subtle: 220 14% 10%;
+    --input: 220 14% 14%;
+    --ring: 24 90% 53%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 220 20% 3%;
+    --sidebar-foreground: 220 10% 55%;
+    --sidebar-primary: 24 90% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 8%;
+    --sidebar-accent-foreground: 220 10% 92%;
+    --sidebar-border: 220 14% 10%;
+    --sidebar-ring: 24 90% 53%;
+
+    /* Semantic tokens */
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 10%;
+    --success: 152 60% 42%;
+    --success-foreground: 152 60% 95%;
+    --critical: 0 72% 51%;
+    --critical-foreground: 0 0% 100%;
+    --info: 210 80% 56%;
+    --info-foreground: 210 80% 95%;
+
+    --surface-elevated: 220 16% 9%;
+    --glow-primary: 24 90% 53%;
+
+    /* Chart tokens */
+    --chart-1: 24 90% 53%;
+    --chart-2: 152 60% 42%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 210 80% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Typography scale — 3 tiers */
+  h1 {
+    @apply text-2xl font-bold tracking-tight;
+    color: hsl(0 0% 100%);
+    line-height: 1.2;
+  }
+
+  h2 {
+    @apply text-sm font-semibold;
+    color: hsl(0 0% 100% / 0.95);
+  }
+
+  h3 {
+    @apply text-xs font-semibold;
+    color: hsl(0 0% 100% / 0.9);
+  }
+}
+
+@layer utilities {
+  .glow-primary {
+    box-shadow: 0 0 40px -8px hsl(var(--glow-primary) / 0.22);
+  }
+
+  .card-hover {
+    @apply transition-all duration-200;
+  }
+
+  .card-hover:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 28px -8px hsl(var(--glow-primary) / 0.12);
+    transform: translateY(-1px);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--warning)));
+  }
+
+  .card-glass {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--surface-elevated)) 100%);
+  }
+
+  /* Section spacing — 8px grid */
+  .section-gap {
+    @apply space-y-10;
+  }
+
+  .section-gap-sm {
+    @apply space-y-7;
+  }
+
+  /* Production card style */
+  .prod-card {
+    @apply rounded-xl border border-border bg-card;
+  }
+
+  .prod-card-padded {
+    @apply rounded-xl border border-border bg-card p-6;
+  }
+
+  /* Meta text — tertiary tier */
+  .text-meta {
+    @apply text-[11px] leading-relaxed;
+    color: hsl(220 10% 58%);
+  }
+
+  /* Label — secondary tier */
+  .text-label {
+    @apply text-[11px] font-semibold uppercase tracking-widest;
+    color: hsl(220 10% 68%);
+  }
+
+  /* Governance trust anchor */
+  .governance-trust-anchor {
+    @apply rounded-xl border-2 p-6;
+    border-color: hsl(var(--primary) / 0.4);
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.08) 0%, hsl(var(--primary) / 0.03) 100%);
+    box-shadow: 0 0 40px -8px hsl(var(--primary) / 0.2), inset 0 1px 0 hsl(var(--primary) / 0.1);
+  }
+
+  /* Verdict emphasis — primary focal point */
+  .verdict-banner {
+    @apply rounded-xl border-2 p-8 flex items-center justify-between;
+  }
+
+  .verdict-approved {
+    border-color: hsl(var(--success) / 0.35);
+    background-color: hsl(var(--success) / 0.08);
+    color: hsl(var(--success));
+  }
+
+  .verdict-escalated {
+    border-color: hsl(var(--warning) / 0.35);
+    background-color: hsl(var(--warning) / 0.08);
+    color: hsl(var(--warning));
+  }
+
+  .verdict-blocked {
+    border-color: hsl(var(--critical) / 0.35);
+    background-color: hsl(var(--critical) / 0.08);
+    color: hsl(var(--critical));
+  }
+}
